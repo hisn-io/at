@@ -149,6 +149,73 @@ pub trait At {
 			None => panic_bounds_check(idx, len),
 		}
 	}
+
+	/// Get a particular index of a `Copy` type. Returns `None` if the index is out of bounds.
+	///
+	/// # Examples
+	/// ```
+	/// use at::At;
+	/// let a = [1, 2, 3];
+	///
+	/// assert_eq!(a.get_at(2), Some(3));
+	/// assert_eq!(a.get_at(-2), Some(2));
+	/// assert_eq!(a.get_at(5), None);
+	/// ```
+	#[inline(always)]
+	fn get_at<T>(&self, idx: impl ToIndex) -> Option<T>
+	where
+		Self: AsRef<[T]>,
+		T: Copy,
+	{
+		let slice = self.as_ref();
+		let len = slice.len();
+
+		check_index(idx, len).map(|i| slice[i])
+	}
+
+	/// Get a particular index by reference. Returns `None` if the index is out of bounds.
+	///
+	/// # Examples
+	/// ```
+	/// use at::At;
+	/// let a = [1, 2, 3];
+	///
+	/// assert_eq!(a.get_ref_at(2), Some(&3));
+	/// assert_eq!(a.get_ref_at(-2), Some(&2));
+	/// assert_eq!(a.get_ref_at(5), None);
+	/// ```
+	#[inline(always)]
+	fn get_ref_at<T>(&self, idx: impl ToIndex) -> Option<&T>
+	where
+		Self: AsRef<[T]>,
+	{
+		let slice = self.as_ref();
+		let len = slice.len();
+
+		check_index(idx, len).map(|i| &slice[i])
+	}
+
+	/// Get a particular index by mutable reference. Returns `None` if the index is out of bounds.
+	///
+	/// # Examples
+	/// ```
+	/// use at::At;
+	/// let mut a = [1, 2, 3];
+	///
+	/// assert_eq!(a.get_mut_at(2), Some(&mut 3));
+	/// assert_eq!(a.get_mut_at(-2), Some(&mut 2));
+	/// assert_eq!(a.get_mut_at(5), None);
+	/// ```
+	#[inline(always)]
+	fn get_mut_at<T>(&mut self, idx: impl ToIndex) -> Option<&mut T>
+	where
+		Self: AsMut<[T]>,
+	{
+		let slice = self.as_mut();
+		let len = slice.len();
+
+		check_index(idx, len).map(|i| &mut slice[i])
+	}
 }
 
 impl<T> At for T {}
@@ -166,6 +233,12 @@ mod test {
 		assert_eq!(v.at(0u8), 1);
 		assert_eq!(v.ref_at(1i128), &2);
 		assert_eq!(v.mut_at(2isize), &mut 3);
+		assert_eq!(v.get_at(0), Some(1));
+		assert_eq!(v.get_ref_at(1), Some(&2));
+		assert_eq!(v.get_mut_at(2), Some(&mut 3));
+		assert_eq!(v.get_at(3), None);
+		assert_eq!(v.get_ref_at(3), None);
+		assert_eq!(v.get_mut_at(3), None);
 	}
 
 	#[test]
@@ -174,6 +247,12 @@ mod test {
 		assert_eq!(v.at(-1i8), 6);
 		assert_eq!(v.ref_at(-2i128), &5);
 		assert_eq!(v.mut_at(-3isize), &mut 4);
+		assert_eq!(v.get_at(-1), Some(6));
+		assert_eq!(v.get_ref_at(-2), Some(&5));
+		assert_eq!(v.get_mut_at(-3), Some(&mut 4));
+		assert_eq!(v.get_at(-10), None);
+		assert_eq!(v.get_ref_at(-11), None);
+		assert_eq!(v.get_mut_at(-12), None);
 	}
 
 	#[test]
