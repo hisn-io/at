@@ -10,7 +10,7 @@ These methods offer a few benefits over standard indexing:
   rather than the compiler "magically" choosing the right kind of access
 - You can disable *all* bounds checks across the entire program by activating the `unsafe-unchecked` feature;
   this is not recommended unless you absolutely need the performance gains
-- If the `fallible` feature is enabled there are 3 additional methods provided that return `Option` instead of panicking on out-of-bounds access: `get_at`, `get_ref_at`, and `get_mut_at`.
+- If the `fallible` feature is enabled there are 4 additional methods provided that return `Option` instead of panicking on out-of-bounds access: `get_at`, `get_ref_at`, `get_mut_at`, and `extract_at` (implemented only for `Vec`).
 
 All this happens with zero runtime overhead compared to standard indexing.
 However, note that checking the validity of signed types is slightly more complex
@@ -34,6 +34,9 @@ assert_eq!(v.get_mut_at(-3), Some(&mut 2));
 assert_eq!(v.get_at(4), None);
 assert_eq!(v.get_ref_at(-5), None);
 assert_eq!(v.get_mut_at(10), None);
+assert_eq!(v.extract_at(-2), Some(1));
+assert_eq!(v.get_at(-2), Some(2));
+assert_eq!(v.extract_at(-10), None);
 ```
 
 [^0]: Specifically, the trait bound is `TryInto<isize> + TryInto<usize> + Debug + Copy`.

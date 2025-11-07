@@ -7,6 +7,9 @@
 #[cfg(feature = "unsafe-unchecked")]
 use core::hint::unreachable_unchecked;
 
+extern crate alloc;
+use alloc::vec::Vec;
+
 mod private {
 	pub trait ToIndex: TryInto<isize> + TryInto<usize> + core::fmt::Debug + Copy {}
 	impl<T: TryInto<isize> + TryInto<usize> + core::fmt::Debug + Copy> ToIndex for T {}
@@ -195,19 +198,44 @@ pub trait At {
 
 		check_index(idx, len).map(|i| &mut slice[i])
 	}
+
+	#[cfg(feature = "fallible")]
+	/// Extracts the element at the given index from the slice, shifting all elements after it
+	/// to the left. Returns `None` if the index is out of bounds.
+	///
+	/// # Examples
+	/// ```
+	/// use at::At;
+	/// let mut a = vec![1, 2, 3, 4];
+	///
+	/// assert_eq!(a.extract_at(1), Some(2));
+	/// assert_eq!(a, vec![1, 3, 4]);
+	/// assert_eq!(a.extract_at(-1), Some(4));
+	/// assert_eq!(a, vec![1, 3]);
+	/// assert_eq!(a.extract_at(5), None);
+	/// ```
+	#[inline(always)]
+	fn extract_at<T>(&mut self, idx: impl ToIndex) -> Option<T>
+	where
+		Self: AsMut<Vec<T>>,
+	{
+		let slice = self.as_mut();
+		let len = slice.len();
+
+		check_index(idx, len).map(|i| slice.remove(i))
+	}
 }
 
 impl<T> At for T {}
 
+#[cfg(test)]
 mod test {
-	#[cfg(test)]
-	use crate::At;
+	use super::At;
+	extern crate alloc;
+	use alloc::vec;
 
 	#[test]
 	fn test_positive() {
-		extern crate std;
-		use std::vec;
-
 		let mut v = vec![1, 2, 3];
 		assert_eq!(v.at(0u8), 1);
 		assert_eq!(v.ref_at(1i128), &2);
@@ -220,12 +248,15 @@ mod test {
 			assert_eq!(v.get_at(3), None);
 			assert_eq!(v.get_ref_at(3), None);
 			assert_eq!(v.get_mut_at(3), None);
+			assert_eq!(v.extract_at(2), Some(3));
+			assert_eq!(v.get_at(3), None);
+			assert_eq!(v.extract_at(10), None);
 		}
 	}
 
 	#[test]
 	fn test_negative() {
-		let mut v = [4, 5, 6];
+		let mut v = vec![4, 5, 6];
 		assert_eq!(v.at(-1i8), 6);
 		assert_eq!(v.ref_at(-2i128), &5);
 		assert_eq!(v.mut_at(-3isize), &mut 4);
@@ -237,6 +268,9 @@ mod test {
 			assert_eq!(v.get_at(-10), None);
 			assert_eq!(v.get_ref_at(-11), None);
 			assert_eq!(v.get_mut_at(-12), None);
+			assert_eq!(v.extract_at(-2), Some(5));
+			assert_eq!(v.get_at(-2), Some(4));
+			assert_eq!(v.extract_at(-10), None);
 		}
 	}
 
